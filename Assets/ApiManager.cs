@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 using UnityEngine.UI;
 using TMPro;
 using UnityEditor.PackageManager.Requests;
-
+using UnityEngine.SceneManagement;
 
 
 [Serializable]
@@ -58,6 +58,7 @@ public class ApiManager : MonoBehaviour
                 Debug.LogError("Error: " + response.error);
             }
         }));
+
     }
 
     private void Login(string username, string password)
@@ -67,11 +68,14 @@ public class ApiManager : MonoBehaviour
 
         StartCoroutine(PostRequest($"{baseUrl}/login", jsonData, (response) =>
         {
-            Debug.Log("Login Response: " + response);
+            
             if (response.result == UnityWebRequest.Result.Success)
             {
-                loginRes.text = response.downloadHandler.text;
-                loginRes.color = Color.green;
+                ResponseLogin responseLogin = JsonConvert.DeserializeObject<ResponseLogin>(response.downloadHandler.text);
+
+                SceneData.data = responseLogin;
+
+                SceneManager.LoadScene("DiceGame");
             }
             else
             {
@@ -80,6 +84,8 @@ public class ApiManager : MonoBehaviour
                 Debug.LogError("Error: " + response.error);
             }
         }));
+
+        
     }
 
     public void GetAllUsers()

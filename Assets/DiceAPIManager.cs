@@ -1,47 +1,79 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.UIElements;
+using Random = UnityEngine.Random;
 
 public class BetRequest
 {
-    public string choice;
-    public int amountToBet;
+    public string betType;
+    public int betAmount;
 }
 
 public class BetResponse
 {
     public string result;
-    public int currentMoney;
+    public int totalAmount;
+
+    public BetResponse(string result, int totalAmount)
+    {
+        this.result = result;
+        this.totalAmount = totalAmount;
+    }
 }
 
 public class DiceAPIManager : MonoBehaviour
 {
-    [SerializeField] string baseUrl = "http://localhost:5007/api/"; 
+    [SerializeField] string baseUrl = "http://localhost:5007/api/Account";
 
     [SerializeField] TMP_Text betStatusResult;
     [SerializeField] TMP_InputField amountToBet;
     [SerializeField] TMP_Text currentMoney;
 
+    [SerializeField] GameObject panelSpinner;
 
-    private void Bet(string _choice, int _amountToBet)
+    private void Start()
     {
-        BetRequest betRequest = new BetRequest { choice = _choice, amountToBet = _amountToBet }; 
+        if(SceneData.data is ResponseLogin responseLogin)
+        {
+            currentMoney.text = responseLogin.totalAmount.ToString();
+        }
+    }
+
+    private void Bet(string _betType, int _betAmount)
+    {
+        BetRequest betRequest = new BetRequest { betType = _betType, betAmount = _betAmount }; 
         string jsonData = JsonConvert.SerializeObject(betRequest);
 
-        StartCoroutine(PostRequest($"{baseUrl}/bet", jsonData, (response) =>
+        StartCoroutine(PostRequest($"{baseUrl}/dice", jsonData, (response) =>
         {
+
 
             if (response.result == UnityWebRequest.Result.Success)
             {
                 string jsonResponse = response.downloadHandler.text;
+
+                Debug.Log(jsonResponse);
+
                 BetResponse betResponse = JsonUtility.FromJson<BetResponse>(jsonResponse);
 
-                SetToUI(betResponse);
+                Debug.Log(betResponse.result);
+                Debug.Log(betResponse.totalAmount);
+
+
+                /*                GameObject newPanelSpin = Instantiate(panelSpinPrefab);
+                                newPanelSpin.GetComponentInChildren<SpinnerTrigger>().segment = Convert.ToInt32(betResponse.result);
+                */
+                panelSpinner.SetActive(true);
+                SpinnerTrigger.instance.segment = Convert.ToInt32(betResponse.result);
+                StartCoroutine(SetMoneyToUI(betResponse.totalAmount.ToString()));
+
             }
             else
             {
@@ -77,17 +109,22 @@ public class DiceAPIManager : MonoBehaviour
 
     public void BetOddAction()
     {
-        Bet("L?", Convert.ToInt32(amountToBet.text));
+        int amount = Convert.ToInt32(amountToBet.text);
+
+        Bet("odd", amount);
     }
 
     public void BetEvenAction()
     {
-        Bet("Ch?n", Convert.ToInt32(amountToBet.text));
+        int amount = Convert.ToInt32(amountToBet.text);
+
+        Bet("even", amount);
     }
 
-    private void SetToUI(BetResponse betResponse)
+    IEnumerator SetMoneyToUI(string money)
     {
-        betStatusResult.text = betResponse.result;
-        currentMoney.text = betResponse.currentMoney.ToString();
+        yield return new WaitForSeconds(4f);
+        currentMoney.text = money;
     }
+
 }
